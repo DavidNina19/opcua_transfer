@@ -1,0 +1,8 @@
+try:
+    node = client.get_node(node_id_str)
+    current_value = node.get_value() # Leer el valor actual
+    db.proccess_data('wilkins', concepto, current_value) # Insertar en la BD
+    last_known_values[node_id_str] = current_value # Guardar el valor como "último conocido"
+    print(f"  [INSERT OK] Concepto: {concepto:<20} | NodeID: {node_id_str:<30} | Valor: {current_value} (Primera Inserción)")
+except Exception as e:
+    print(f"  [ERROR] Primera lectura/inserción del nodo '{node_id_str}' (Concepto: {concepto}): {e}")
