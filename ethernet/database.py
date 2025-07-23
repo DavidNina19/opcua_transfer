@@ -8,7 +8,7 @@ class Database:
         self.host = host or '192.168.252.35'
         self.user = user or 'powerbi_david'
         self.password = password or 'Scada2024%'
-        self.database = database or 'system_communication'
+        self.database = database or 'ethernet_communication'
         self.port = port or 3306
 
         self.connection = sql.connect(
@@ -146,23 +146,46 @@ class Database:
                 cursor.close()
 
     def proccess_data_transfer(self, tag, valor, codmaq):
-        """Insertar datos en la codmaq."""
-        if not self.connection:
-            print("No hay conexión a la base de datos.")
-            return
+        """
+        Inserta datos en la codmaq.
+        """
+        print(f"\n[DEBUG DB] proccess_data_transfer: Iniciando para tag='{tag}', valor='{valor}', codmaq='{codmaq}'")
+
+        mes_actual = datetime.now().strftime('%m')
+        ano_actual = datetime.now().strftime('%Y')
+
+        codmaq_clean = codmaq.replace(' ','')
+            
+        table_name = f"{codmaq_clean}_{mes_actual}_{ano_actual}"
+        print(f"[DEBUG DB] Nombre de tabla calculado: '{table_name}'") # Added debug print
+
         try:
+            # 1. Check if table exists, if not, create it
+            print(f"[DEBUG DB] Verificando si la tabla '{table_name}' existe...")
+            if not self.table_exists(table_name):
+                print(f"[DEBUG DB] La tabla '{table_name}' NO existe. Intentando crearla...")
+                #if not self.create_transfer_table(table_name): # Use the new create_transfer_table method
+                #    print(f"[DEBUG DB] ERROR FATAL: Fallo al crear la tabla '{table_name}'. Abortando inserción.")
+                #    return
+                print(f"[DEBUG DB] Tabla '{table_name}' creada exitosamente o ya existía.")
+            else:
+                print(f"[DEBUG DB] La tabla '{table_name}' ya existe.")
+
             cursor = self.connection.cursor()
-            formato_fecha = datetime.now().strftime('_m%_Y%')
-            # t_stamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')  # Obtener la marca de tiempo actual
             query = f"""
-                    INSERT INTO {codmaq.replace(' ','')}{formato_fecha} (tag, valor, t_stamp)
-                    VALUES (%s, %s, NOW())
-                    """
-            cursor.execute(query, (tag, valor))
+            INSERT INTO ethernet_communication.{table_name} (tag, valor, t_stamp)
+            VALUES (%s, %s, NOW())
+            """
+            print(f"[DEBUG DB] Consulta SQL preparada: {query.strip()}")
+            print(f"[DEBUG DB] Parámetros para la consulta: (tag='{tag}', valor='{str(valor)}')")
+
+            # Ensure valor is converted to string for VARCHAR column
+            cursor.execute(query, (tag, str(valor)))
             self.connection.commit()
-            print(f"Dato insertado: tag={tag}, valor={valor}")
+            print(f"[DEBUG DB] ¡COMMIT exitoso! Dato insertado en '{table_name}': tag='{tag}', valor='{valor}'")
         except Exception as e:
-            print(f"Error al insertar datos: {e}")
+            self.connection.rollback()
+            print(f"[DEBUG DB] ERROR durante la inserción en '{table_name}': {e}")
         finally:
             if cursor:
                 cursor.close()

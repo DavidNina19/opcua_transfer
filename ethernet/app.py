@@ -14,23 +14,36 @@ def lectura_texto():
         print(address_array)
     return address_array
 
+
 def main():
     lectura_nodos = lectura_texto()
+    transfer_instances = []
     for ip, maq in lectura_nodos:
-        rdTransfer = readTransfer(ip, maq)
-        print("--- Iniciando ciclo de lectura principal ---")
+        transfer_instances.append(readTransfer(ip, maq))
+    
+    print("--- Iniciando ciclo de lectura principal ---")
 
-        try:
-            while True:
-                print("\n--- Ejecutando ciclo de TRANFERS ---")
-                rdTransfer.connect_opcua()
-                
-                time.sleep(0.1) # Espera 5 segundos antes de la siguiente ronda de lecturas
+    try:
+        while True: # Este es el ÚNICO bucle infinito
+            print(f"\n--- Ejecutando ciclo de lectura para {len(transfer_instances)} máquinas ---")
+            
+            for rdTransfer_instance in transfer_instances:
+                # Cada instancia se conecta y lee SUS propios nodos
+                print(f"--- Leyendo máquina: {rdTransfer_instance.codmaq} ---") 
+                rdTransfer_instance.connect_opcua() 
+            
+            time.sleep(0.1) # Espera un poco antes de la siguiente ronda de lecturas de TODAS las máquinas
 
-        except KeyboardInterrupt:
-            print("\nCiclo de lectura detenido por el usuario.")
+    except KeyboardInterrupt:
+        print("\nCiclo de lectura detenido por el usuario.")
+    except Exception as e:
+        print(f"Ocurrió un error inesperado en el ciclo principal: {e}")
 
-        print(f"\nFinal Total de cambios detectados para TRANSFERS: {rdTransfer.change_count}")
-        print(f"Valores finales almacenados en previous_values para TRANSFERS: {rdTransfer.previous_values}")
+    # Opcional: Imprimir los conteos finales después de la interrupción
+    print("\n--- Resumen final de cambios detectados ---")
+    for rdTransfer_instance in transfer_instances:
+        print(f"Máquina {rdTransfer_instance.codmaq}:")
+        print(f"  Total de cambios detectados: {rdTransfer_instance.change_count}")
+        # print(f"  Valores finales almacenados: {rdTransfer_instance.previous_values}") # Descomentar para depuración
 
 main()

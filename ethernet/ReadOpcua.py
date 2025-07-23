@@ -101,4 +101,4 @@ class readTransfer:
     def loop(self):
         while True:
             self.connect_opcua()
-            time.sleep(5)
+            #time.sleep(5)
